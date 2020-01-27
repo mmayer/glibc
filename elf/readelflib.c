@@ -22,6 +22,11 @@
    which need to handle both 32bit and 64bit ELF libraries,  this file is
    included twice for each arch size.  */
 
+/*
+ * SKIP_READELF_INCLUDE provides a means to skip including this file if we know
+ * it will be included a different way.
+ */
+#ifndef SKIP_READELF_INCLUDE
 /* check_ptr checks that a pointer is in the mmaped file and doesn't
    point outside it.  */
 #undef check_ptr
@@ -253,3 +258,4 @@ process_elf_file (const char *file_name, const char *lib, int *flag,
 
   return 0;
 }
+#endif /* SKIP_READELF_INCLUDE */
