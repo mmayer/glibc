@@ -25,6 +25,24 @@ int process_elf64_file (const char *file_name, const char *lib, int *flag,
 			unsigned int *osversion, char **soname,
 			void *file_contents, size_t file_length);
 
+/*
+ * This ARM + x86 hack works as follows.
+ *
+ * We set SKIP_READELF_INCLUDE, so ARM's readelflib.c won't try to include the
+ * generic readelflib.c. We do that at the bottom of this file instead.
+ * Next, we map the name of ARM's process_elf_file() to
+ * process_elf_file_arm(). This way, its name won't clash with our own.
+ * Lastly, we add code to the x86 version of process_elf_file() to recognize ARM
+ * files and call process_elf_file_arm() instead of trying to process them
+ * directly.
+ */
+
+#define SKIP_READELF_INCLUDE
+#define process_elf_file process_elf_file_arm
+#include "sysdeps/unix/sysv/linux/arm/readelflib.c"
+#undef process_elf_file
+#undef SKIP_READELF_INCLUDE
+
 /* Returns 0 if everything is ok, != 0 in case of error.  */
 int
 process_elf_file (const char *file_name, const char *lib, int *flag,
@@ -36,6 +54,12 @@ process_elf_file (const char *file_name, const char *lib, int *flag,
 
   switch (elf_header->e_machine)
     {
+    case EM_ARM:
+    case EM_AARCH64:
+      /* Call the ARM parser for ARM & AArch64. Skip the x86 code by exiting. */
+      ret = process_elf_file_arm (file_name, lib, flag, osversion, soname,
+			          file_contents, file_length);
+      return ret;
     case EM_X86_64:
       if (elf_header->e_ident[EI_CLASS] == ELFCLASS64)
 	/* X86-64 64bit libraries are always libc.so.6+.  */
